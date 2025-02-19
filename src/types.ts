@@ -22,7 +22,7 @@ export type EvaluateFlagResponse = {
     enabled: boolean;
 };
 
-export type FeatureFlagClientConfig = {
+export type PearFlagClientConfig = {
     key: string;
     baseUrl?: string;
     customFetch?: typeof fetch;

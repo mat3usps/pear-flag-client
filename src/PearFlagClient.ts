@@ -2,14 +2,14 @@ import {
     EvaluateFlagRequest,
     EvaluateFlagResponse,
     EvaluateFlagsRequest,
-    FeatureFlagClientConfig,
+    PearFlagClientConfig,
     ValidationProps,
 } from "./types";
 
 // TODO: add real url
 export const DEFAULT_BASE_URL = "http://localhost:5173";
 
-class FeatureFlagClient {
+class PearFlagClient {
     private baseUrl: string;
     private debug: boolean;
     private defaultTimeout: number;
@@ -22,7 +22,7 @@ class FeatureFlagClient {
     private logger: (message: string) => void = console.log;
     private retryPolicy: { retries: number; delay: number } = { retries: 3, delay: 1000 };
 
-    constructor(config: FeatureFlagClientConfig) {
+    constructor(config: PearFlagClientConfig) {
         if (!config.key || !this.validateApiKey(config.key)) {
             throw new Error("Invalid API key. The key must be a 32-character hexadecimal string.");
         }
@@ -135,7 +135,7 @@ class FeatureFlagClient {
 
     private log(message: string): void {
         if (this.debug) {
-            this.logger(`[FeatureFlagClient] ${message}`);
+            this.logger(`[PearFlagClient] ${message}`);
         }
     }
 
@@ -175,10 +175,10 @@ class FeatureFlagClient {
             const clonedResponse = response.clone();
             try {
                 const errorResponse = await clonedResponse.json();
-                errorDetail = errorResponse.error ?? errorDetail;
+                if (errorResponse.error) errorDetail = errorResponse.error;
             } catch (jsonError) {
                 const rawError = await response.text();
-                errorDetail = rawError ?? errorDetail;
+                if (rawError) errorDetail = rawError;
             }
             throw new Error(`${errorMessage}: ${errorDetail}`);
         }
@@ -219,8 +219,8 @@ class FeatureFlagClient {
      * @param key - The new API key.
      */
     public setApiKey(key: string): void {
-        if (!key) {
-            throw new Error("API key is required");
+        if (!key || !this.validateApiKey(key)) {
+            throw new Error("Invalid API key. The key must be a 32-character hexadecimal string.");
         }
         this.key = key;
         this.log("API key updated.");
@@ -303,7 +303,7 @@ class FeatureFlagClient {
      * Gets the current configuration of the client.
      * @returns An object containing the current configuration.
      */
-    public getConfig(): FeatureFlagClientConfig {
+    public getConfig(): PearFlagClientConfig {
         return {
             key: this.key,
             baseUrl: this.baseUrl,
@@ -314,4 +314,4 @@ class FeatureFlagClient {
     }
 }
 
-export default FeatureFlagClient;
+export default PearFlagClient;

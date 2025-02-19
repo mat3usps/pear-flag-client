@@ -1,3 +1,3 @@
-import FeatureFlagClient from './FeatureFlagClient';
+import PearFlagClient from "./PearFlagClient";
 
-export { FeatureFlagClient };
+export { PearFlagClient };

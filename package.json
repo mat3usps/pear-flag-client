@@ -1,24 +1,24 @@
 {
-  "name": "pear-flag",
-  "description": "A client SDK for interacting with the feature flag service.",
-  "version": "0.0.1",
-  "main": "dist/index.js",
-  "module": "dist/index.js",
-  "browser": "dist/index.browser.js",
-  "types": "dist/index.d.ts",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "build": "tsc"
-  },
-  "keywords": [],
-  "author": "mat3usps",
-  "license": "ISC",
-  "devDependencies": {
-    "@types/jest": "^29.5.14",
-    "@types/node": "^22.13.4",
-    "jest": "^29.7.0",
-    "jest-fetch-mock": "^3.0.3",
-    "ts-jest": "^29.2.5",
-    "typescript": "^5.7.3"
-  }
+    "name": "pear-flag",
+    "description": "A client SDK for interacting with the feature flag service.",
+    "version": "0.0.1",
+    "main": "dist/index.js",
+    "module": "dist/index.js",
+    "browser": "dist/index.browser.js",
+    "types": "dist/index.d.ts",
+    "scripts": {
+        "test": "echo \"Error: no test specified\" && exit 1",
+        "build": "tsc"
+    },
+    "keywords": [],
+    "author": "mat3usps",
+    "license": "ISC",
+    "devDependencies": {
+        "@types/jest": "^29.5.14",
+        "@types/node": "^22.13.4",
+        "jest": "^29.7.0",
+        "jest-fetch-mock": "^3.0.3",
+        "ts-jest": "^29.2.5",
+        "typescript": "^5.7.3"
+    }
 }

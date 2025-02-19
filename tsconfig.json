@@ -1,13 +1,11 @@
 {
     "compilerOptions": {
-        "target": "ESNext",
-        "module": "ESNext",
-        "strict": true,
-        "esModuleInterop": true,
-        "skipLibCheck": true,
-        "forceConsistentCasingInFileNames": true,
-        "declaration": true,
-        "outDir": "./dist"
-    },
-    "include": ["src/**/*.ts"]
-}
+      "target": "es6",
+      "module": "commonjs",
+      "lib": ["dom", "es2015"],
+      "types": ["jest", "node"],
+      "esModuleInterop": true,
+      "skipLibCheck": true,
+      "forceConsistentCasingInFileNames": true
+    }
+  }

@@ -7,7 +7,7 @@ import {
 } from "./types";
 
 // TODO: add real url
-const DEFAULT_BASE_URL = "http://localhost:5173";
+export const DEFAULT_BASE_URL = "http://localhost:5173";
 
 class FeatureFlagClient {
     private baseUrl: string;
@@ -23,7 +23,7 @@ class FeatureFlagClient {
     private retryPolicy: { retries: number; delay: number } = { retries: 3, delay: 1000 };
 
     constructor(config: FeatureFlagClientConfig) {
-        if (!config.key || this.validateApiKey(config.key)) {
+        if (!config.key || !this.validateApiKey(config.key)) {
             throw new Error("Invalid API key. The key must be a 32-character hexadecimal string.");
         }
 
@@ -46,8 +46,7 @@ class FeatureFlagClient {
      */
     public async evaluateFlags(
         request: EvaluateFlagsRequest,
-        timeout: number = this.defaultTimeout,
-        retries: number = 3
+        timeout: number = this.defaultTimeout
     ): Promise<EvaluateFlagResponse[] | undefined> {
         this.log("Evaluating flags...");
         this.validateRequest({ request, isMultiple: true });
@@ -56,7 +55,7 @@ class FeatureFlagClient {
             return this.flagsCache.get(cacheKey)!;
         }
 
-        for (let attempt = 1; attempt <= retries; attempt++) {
+        for (let attempt = 1; attempt <= this.retryPolicy.retries; attempt++) {
             try {
                 const controller = new AbortController();
                 const timeoutId = setTimeout(() => controller.abort(), timeout);
@@ -67,18 +66,14 @@ class FeatureFlagClient {
                 });
                 clearTimeout(timeoutId);
 
-                if (!response.ok) {
-                    this.log(`Failed to evaluate flags: ${response.statusText}`);
-                    throw new Error(`Failed to evaluate flags: ${response.statusText}`);
-                }
-                const flags = await response.json();
+                const flags = await this.handleErrorResponse(response, "Failed to evaluate flags");
                 this.log(`Flags evaluated: ${JSON.stringify(flags)}`);
                 this.setCache(this.flagsCache, cacheKey, flags);
                 return flags;
             } catch (error) {
                 this.log(`Attempt ${attempt} failed.`);
                 if (attempt === this.retryPolicy.retries) {
-                    this.handleError(error);
+                    throw new Error(error.message);
                 } else {
                     await new Promise((resolve) => setTimeout(resolve, this.retryPolicy.delay));
                 }
@@ -95,8 +90,7 @@ class FeatureFlagClient {
      */
     public async evaluateFlag(
         request: EvaluateFlagRequest,
-        timeout: number = this.defaultTimeout,
-        retries: number = 3
+        timeout: number = this.defaultTimeout
     ): Promise<EvaluateFlagResponse | undefined> {
         this.log("Evaluating flag...");
         this.validateRequest({ request });
@@ -116,18 +110,14 @@ class FeatureFlagClient {
                 });
                 clearTimeout(timeoutId);
 
-                if (!response.ok) {
-                    this.log(`Failed to evaluate flag: ${response.statusText}`);
-                    throw new Error(`Failed to evaluate flag: ${response.statusText}`);
-                }
-                const flag = await response.json();
+                const flag = await this.handleErrorResponse(response, "Failed to evaluate flag");
                 this.log(`Flag evaluated: ${JSON.stringify(flag)}`);
                 this.setCache(this.flagCache, cacheKey, flag);
                 return flag;
             } catch (error) {
                 this.log(`Attempt ${attempt} failed.`);
-                if (attempt === this.retryPolicy.retries) {
-                    this.handleError(error);
+                if (attempt >= this.retryPolicy.retries) {
+                    throw error;
                 } else {
                     await new Promise((resolve) => setTimeout(resolve, this.retryPolicy.delay));
                 }
@@ -139,7 +129,7 @@ class FeatureFlagClient {
         return {
             "Content-Type": "application/json",
             "x-api-key": this.key,
-            ...this.customHeaders, // Merge custom headers
+            ...this.customHeaders,
         };
     }
 
@@ -179,12 +169,20 @@ class FeatureFlagClient {
         return `${request.environment}:${request.user.id}`;
     }
 
-    private handleError(error: unknown) {
-        if (error instanceof Error) {
-            throw new Error(`Network error: ${error.message}`);
-        } else {
-            throw new Error(`Network error: ${String(error)}`);
+    private async handleErrorResponse(response: Response, errorMessage: string) {
+        if (!response.ok) {
+            let errorDetail = "Internal Server Error";
+            const clonedResponse = response.clone();
+            try {
+                const errorResponse = await clonedResponse.json();
+                errorDetail = errorResponse.error ?? errorDetail;
+            } catch (jsonError) {
+                const rawError = await response.text();
+                errorDetail = rawError ?? errorDetail;
+            }
+            throw new Error(`${errorMessage}: ${errorDetail}`);
         }
+        return response.json();
     }
 
     /**
@@ -235,7 +233,7 @@ class FeatureFlagClient {
      */
     public setRetryPolicy(retries: number, delay: number): void {
         this.retryPolicy = { retries, delay };
-        this.log(`Retry policy updated: ${retries} retries with ${delay}ms delay`);
+        this.log(`Retry policy updated: ${retries} retries with ${delay}ms delay.`);
     }
 
     /**
@@ -260,7 +258,7 @@ class FeatureFlagClient {
      */
     public setCacheTTL(ttl: number): void {
         this.cacheTTL = ttl;
-        this.log(`Cache TTL set to: ${ttl}ms`);
+        this.log(`Cache TTL set to: ${ttl}ms.`);
     }
 
     /**

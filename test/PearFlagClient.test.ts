@@ -19,6 +19,20 @@ describe("PearFlagClient", () => {
     });
 
     describe("initial config", () => {
+        it("should set initial config", () => {
+            const customConfig = {
+                key: "0da8f357ce7a2b01effe5992f295a592",
+                baseUrl: "https://api.example.com",
+                debug: true,
+                defaultTimeout: 5697,
+                customHeaders: { chedar: "cheese" },
+            };
+
+            client = new PearFlagClient(customConfig);
+
+            expect(client.getConfig()).toStrictEqual(customConfig);
+        });
+
         it("should be set to default url if none is passed", () => {
             const client = new PearFlagClient({
                 key: "0da8f357ce7a2b01effe5992f295a592",
@@ -27,10 +41,19 @@ describe("PearFlagClient", () => {
             expect(client.getConfig().baseUrl).toEqual(DEFAULT_BASE_URL);
         });
 
-        it.each(["", "invalid-key"])("should handle empty and invalid API keys", (key) => {
+        it("should handle invalid API keys", () => {
             const customConfig = {
-                key,
-                url: "https://api.example.com",
+                key: "invalid-key",
+            };
+
+            expect(() => new PearFlagClient(customConfig)).toThrow(
+                "Invalid API key. The key must be a 32-character hexadecimal string."
+            );
+        });
+
+        it("should handle empty API keys", () => {
+            const customConfig = {
+                key: "",
             };
 
             expect(() => new PearFlagClient(customConfig)).toThrow(
@@ -78,19 +101,19 @@ describe("PearFlagClient", () => {
 
         it.each([
             [
+                "Environment is required",
                 {
                     user: { id: "user1", email: "user1@example.com" },
                 },
-                "Environment is required",
             ],
             [
+                "User ID is required",
                 {
                     environment: "production",
                     user: { email: "user1@example.com" },
                 },
-                "User ID is required",
             ],
-        ])("should handle invalid request", async (request, error) => {
+        ])("should throw %s for an invalid request", async (error, request) => {
             fetchMock.mockResponse(JSON.stringify(mockResponse), { status: 500 });
 
             await expect(client.evaluateFlags(request as EvaluateFlagsRequest)).rejects.toThrow(error);
@@ -148,28 +171,28 @@ describe("PearFlagClient", () => {
 
         it.each([
             [
+                "Flag is required",
                 {
                     environment: "production",
                     user: { id: "user1", email: "user1@example.com" },
                 },
-                "Flag is required",
             ],
             [
+                "Environment is required",
                 {
                     flag: "feature-1",
                     user: { id: "user1", email: "user1@example.com" },
                 },
-                "Environment is required",
             ],
             [
+                "User ID is required",
                 {
                     flag: "feature-1",
                     environment: "production",
                     user: { email: "user1@example.com" },
                 },
-                "User ID is required",
             ],
-        ])("should handle invalid request", async (request, error) => {
+        ])("should throw %s for an invalid request", async (error, request) => {
             fetchMock.mockResponseOnce(JSON.stringify(mockResponse));
 
             await expect(client.evaluateFlag(request as EvaluateFlagRequest)).rejects.toThrow(error);
@@ -188,26 +211,14 @@ describe("PearFlagClient", () => {
         });
     });
 
-    describe("setApiKey", () => {
-        it("should update the API key", () => {
-            const customConfig = {
-                key: "0da8f357ce7a2b01effe5992f295a592",
-                baseUrl: "https://api.example.com",
-                debug: true,
-                defaultTimeout: 5697,
-                customHeaders: { chedar: "cheese" },
-            };
-
-            client = new PearFlagClient(customConfig);
-
-            expect(client.getConfig()).toStrictEqual(customConfig);
-        });
-    });
-
     describe("setBaseUrl", () => {
         it("should update the base URL", () => {
             client.setBaseUrl(NEW_URL);
             expect(client.getConfig().baseUrl).toBe(NEW_URL);
+        });
+
+        it("should throw an error for empty URLs", () => {
+            expect(() => client.setBaseUrl("")).toThrow("Invalid base URL: ");
         });
 
         it("should throw an error for invalid URLs", () => {
@@ -216,7 +227,7 @@ describe("PearFlagClient", () => {
     });
 
     describe("setLogger & setDebug", () => {
-        it("should set custom logger and toggle debug mode", () => {
+        it("should configure custom logger and toggle debug mode", () => {
             const customLogger = jest.fn();
             const customLogger2 = jest.fn();
 
@@ -237,7 +248,7 @@ describe("PearFlagClient", () => {
     });
 
     describe("resetBaseUrl", () => {
-        it("should reset the base URL", () => {
+        it("should reset base URL", () => {
             client.setBaseUrl(NEW_URL);
             expect(client.getConfig().baseUrl).toBe(NEW_URL);
 
@@ -254,8 +265,14 @@ describe("PearFlagClient", () => {
             expect(client.getConfig().key).toBe(newApiKey);
         });
 
-        it.each(["", "invalid-key"])("should throw an error for invalid API keys", (key) => {
-            expect(() => client.setApiKey(key)).toThrow(
+        it("should throw an error for empty API keys", () => {
+            expect(() => client.setApiKey("")).toThrow(
+                "Invalid API key. The key must be a 32-character hexadecimal string."
+            );
+        });
+
+        it("should throw an error for invalid API keys", () => {
+            expect(() => client.setApiKey("invalid-key")).toThrow(
                 "Invalid API key. The key must be a 32-character hexadecimal string."
             );
         });
@@ -265,7 +282,7 @@ describe("PearFlagClient", () => {
         it.each([
             [0, 1000],
             [11, 200],
-        ])("should update retry policy", (retries, delay) => {
+        ])("should update retry policy to %s retries and %sms delay ", (retries, delay) => {
             const customLogger = jest.fn();
             client.setLogger(customLogger);
             client.setDebug(true);
@@ -287,7 +304,7 @@ describe("PearFlagClient", () => {
     });
 
     describe("setCacheTTL", () => {
-        it.each([1000, 3333])("should set cache time-to-live", (cacheTTL) => {
+        it.each([1000, 3333])("should set cache time-to-live to %sms", (cacheTTL) => {
             const customLogger = jest.fn();
             client.setLogger(customLogger);
             client.setDebug(true);
@@ -296,7 +313,7 @@ describe("PearFlagClient", () => {
             expect(customLogger).toHaveBeenCalledWith(`[PearFlagClient] Cache TTL set to: ${cacheTTL}ms.`);
         });
 
-        it.each([123, 300])("should delete cache after time-to-live", async (cacheTTL) => {
+        it.each([123, 300])("should delete cache after %sms of time-to-live", async (cacheTTL) => {
             jest.useFakeTimers();
 
             const mockResponse1: EvaluateFlagResponse[] = [];
@@ -353,7 +370,7 @@ describe("PearFlagClient", () => {
     });
 
     describe("setTimeout", () => {
-        it.each([5000, 123])("should update the API key", (time) => {
+        it.each([5000, 123])("should configure timeout to %sms", (time) => {
             client.setTimeout(time);
 
             expect(client.getConfig().defaultTimeout).toBe(time);

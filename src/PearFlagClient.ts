@@ -169,6 +169,13 @@ class PearFlagClient {
         return `${request.environment}:${request.user.id}`;
     }
 
+    private setCache<T>(cache: Map<string, T>, key: string, value: T): void {
+        cache.set(key, value);
+        if (this.cacheTTL > 0) {
+            setTimeout(() => cache.delete(key), this.cacheTTL);
+        }
+    }
+
     private async handleErrorResponse(response: Response, errorMessage: string) {
         if (!response.ok) {
             let errorDetail = "Internal Server Error";
@@ -191,7 +198,7 @@ class PearFlagClient {
      */
     public setDebug(enabled: boolean): void {
         this.debug = enabled;
-        this.log(`Debug logging ${enabled ? "enabled" : "disabled"}.`);
+        this.log("Debug logging enabled.");
     }
 
     /**
@@ -243,13 +250,6 @@ class PearFlagClient {
     public setCustomHeaders(headers: Record<string, string>): void {
         this.customHeaders = headers;
         this.log("Custom headers updated.");
-    }
-
-    private setCache<T>(cache: Map<string, T>, key: string, value: T): void {
-        cache.set(key, value);
-        if (this.cacheTTL > 0) {
-            setTimeout(() => cache.delete(key), this.cacheTTL);
-        }
     }
 
     /**
